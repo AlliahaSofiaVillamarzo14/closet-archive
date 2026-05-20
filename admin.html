@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Closet Archive — Admin Dashboard</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-box">
+    <div style="font-size:32px;margin-bottom:12px;">🏪</div>
+    <h2>Closet Archive</h2>
+    <p>Admin Dashboard — Owner Login</p>
+    <input type="password" id="admin-pass" placeholder="Enter admin password" onkeydown="if(event.key==='Enter')login()"/>
+    <button onclick="login()">LOGIN</button>
+    <div id="login-error"></div>
+  </div>
+</div>
+
+<!-- DASHBOARD -->
+<div id="dashboard">
+  <div class="topbar">
+    <div class="topbar-logo">🏪 CLOSET ARCHIVE ADMIN</div>
+    <div class="topbar-right">
+      <span id="last-refresh" style="font-size:12px;color:rgba(255,255,255,.5);"></span>
+      <button onclick="loadOrders()"><i class="fas fa-sync-alt"></i> Refresh</button>
+      <button onclick="exportCSV()"><i class="fas fa-download"></i> Export CSV</button>
+      <button onclick="logout()" style="background:rgba(255,80,80,.15);"><i class="fas fa-sign-out-alt"></i> Logout</button>
+    </div>
+  </div>
+
+  <!-- STATS -->
+  <div class="stats-row">
+    <div class="stat-card">
+      <label>Total Orders</label>
+      <strong id="stat-total">—</strong>
+    </div>
+    <div class="stat-card">
+      <label>Total Revenue</label>
+      <strong id="stat-revenue">—</strong>
+    </div>
+    <div class="stat-card">
+      <label>Pending / Active</label>
+      <strong id="stat-pending">—</strong>
+    </div>
+    <div class="stat-card">
+      <label>Delivered</label>
+      <strong id="stat-delivered">—</strong>
+    </div>
+  </div>
+
+  <!-- ORDERS TABLE -->
+  <div class="section-wrap">
+    <div class="section-title">
+      <span>All Orders</span>
+    </div>
+
+    <div class="filter-bar">
+      <input type="text" id="search-input" placeholder="Search by name, tracking, address…" oninput="filterOrders()"/>
+      <select id="filter-status" onchange="filterOrders()">
+        <option value="">All Statuses</option>
+        <option>Order Confirmed</option>
+        <option>Preparing Your Order</option>
+        <option>Shipped</option>
+        <option>Out for Delivery</option>
+        <option>Delivered</option>
+      </select>
+    </div>
+
+    <div class="orders-table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th></th>
+            <th>Tracking #</th>
+            <th>Customer</th>
+            <th>Address</th>
+            <th>Contact</th>
+            <th>Total</th>
+            <th>Status</th>
+            <th>Date</th>
+          </tr>
+        </thead>
+        <tbody id="orders-tbody">
+          <tr><td colspan="8" class="empty-state"><i class="fas fa-box-open"></i>Loading orders…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div id="admin-toast"></div>
+
+<script>
+  const STATUSES = ['Order Confirmed','Preparing Your Order','Shipped','Out for Delivery','Delivered'];
+  let allOrders  = [];
+  let adminToken = '';
+
+  const STATUS_CLASS = {
+    'Order Confirmed':     'confirmed',
+    'Preparing Your Order':'preparing',
+    'Shipped':             'shipped',
+    'Out for Delivery':    'outdelivery',
+    'Delivered':           'delivered'
+  };
+
+  // ── LOGIN ─────────────────────────────────────────────────
+  function login() {
+    const pass = document.getElementById('admin-pass').value;
+    if (!pass) return;
+    adminToken = pass;
+    loadOrders();
+  }
+
+  function logout() {
+    adminToken = '';
+    allOrders  = [];
+    document.getElementById('login-screen').style.display = 'flex';
+    document.getElementById('dashboard').style.display    = 'none';
+    document.getElementById('admin-pass').value = '';
+  }
+
+  // ── LOAD ORDERS FROM SERVER ───────────────────────────────
+  async function loadOrders() {
+    try {
+      const res = await fetch('/api/orders', {
+        headers: { 'Authorization': 'Bearer ' + adminToken }
+      });
+
+      if (res.status === 401) {
+        document.getElementById('login-error').textContent = 'Wrong password. Try again.';
+        return;
+      }
+
+      document.getElementById('login-error').textContent = '';
+      document.getElementById('login-screen').style.display = 'none';
+      document.getElementById('dashboard').style.display    = 'block';
+
+      const json = await res.json();
+      allOrders  = json.orders || [];
+      document.getElementById('last-refresh').textContent = 'Updated ' + new Date().toLocaleTimeString();
+      renderStats();
+      filterOrders();
+    } catch (err) {
+      alert('Could not connect to server. Make sure server.js is running.');
+    }
+  }
+
+  // ── STATS ─────────────────────────────────────────────────
+  function renderStats() {
+    const total    = allOrders.length;
+    const revenue  = allOrders.reduce((s, o) => s + Number(o.total || 0), 0);
+    const delivered= allOrders.filter(o => o.status === 'Delivered').length;
+    const pending  = total - delivered;
+
+    document.getElementById('stat-total').textContent    = total;
+    document.getElementById('stat-revenue').textContent  = '₱' + revenue.toFixed(2);
+    document.getElementById('stat-pending').textContent  = pending;
+    document.getElementById('stat-delivered').textContent= delivered;
+  }
+
+  // ── FILTER ────────────────────────────────────────────────
+  function filterOrders() {
+    const q      = document.getElementById('search-input').value.toLowerCase();
+    const status = document.getElementById('filter-status').value;
+
+    const filtered = allOrders.filter(o => {
+      const matchQ = !q || [o.trackingNumber, o.fullName, o.address, o.contact, o.email]
+        .join(' ').toLowerCase().includes(q);
+      const matchS = !status || o.status === status;
+      return matchQ && matchS;
+    });
+
+    renderTable(filtered);
+  }
+
+  // ── RENDER TABLE ──────────────────────────────────────────
+  function renderTable(orders) {
+    const tbody = document.getElementById('orders-tbody');
+    if (!orders.length) {
+      tbody.innerHTML = '<tr><td colspan="8"><div class="empty-state"><i class="fas fa-box-open"></i>No orders found.</div></td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = '';
+    orders.forEach((o, idx) => {
+      const detailId = 'detail-' + o.trackingNumber;
+      const date     = new Date(o.placedAt).toLocaleDateString('en-PH', { month:'short', day:'numeric', year:'numeric' });
+      const pill     = STATUS_CLASS[o.status] || 'confirmed';
+
+      // Main row
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><button class="expand-btn" onclick="toggleDetail('${o.trackingNumber}')">▸</button></td>
+        <td class="mono">${o.trackingNumber}</td>
+        <td><strong>${esc(o.fullName)}</strong><br><span style="font-size:11px;color:#818ea0;">${esc(o.email||'')}</span></td>
+        <td style="max-width:180px;word-break:break-word;">${esc(o.address)}</td>
+        <td>${esc(o.contact)}</td>
+        <td style="font-weight:700;">₱${Number(o.total).toFixed(2)}</td>
+        <td>
+          <select class="status-select" onchange="updateStatus('${o.trackingNumber}', this.value)">
+            ${STATUSES.map(s => `<option value="${s}" ${s===o.status?'selected':''}>${s}</option>`).join('')}
+          </select>
+          <span class="status-pill ${pill}" style="display:none;">${o.status}</span>
+        </td>
+        <td style="font-size:12px;color:#818ea0;">${date}</td>
+      `;
+      tbody.appendChild(tr);
+
+      // Detail row (hidden)
+      const dr = document.createElement('tr');
+      dr.id = detailId;
+      dr.style.display = 'none';
+
+      const itemsHtml = (o.items||[]).map(i =>
+        `<li>• ${esc(i.title)} — ₱${Number(i.price).toFixed(2)}</li>`
+      ).join('');
+
+      dr.innerHTML = `
+        <td colspan="8">
+          <div class="detail-inner">
+            <strong style="font-size:13px;color:#041e42;">Items Ordered:</strong>
+            <ul class="items-list" style="margin-top:8px;">${itemsHtml||'<li>No items</li>'}</ul>
+            <p style="margin-top:10px;font-size:12px;color:#818ea0;">
+              Subtotal: ₱${Number(o.subtotal||0).toFixed(2)} &nbsp;|&nbsp;
+              Discount: ₱${Number(o.discount||0).toFixed(2)} &nbsp;|&nbsp;
+              <strong>Total: ₱${Number(o.total||0).toFixed(2)}</strong>
+            </p>
+          </div>
+        </td>`;
+      tbody.appendChild(dr);
+    });
+  }
+
+  function toggleDetail(tn) {
+    const row = document.getElementById('detail-' + tn);
+    if (!row) return;
+    const visible = row.style.display !== 'none';
+    row.style.display = visible ? 'none' : 'table-row';
+    // flip arrow
+    const btn = row.previousElementSibling?.querySelector('.expand-btn');
+    if (btn) btn.textContent = visible ? '▸' : '▾';
+  }
+
+  // ── UPDATE STATUS ─────────────────────────────────────────
+  async function updateStatus(tn, newStatus) {
+    try {
+      const res = await fetch(`/api/orders/${encodeURIComponent(tn)}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + adminToken },
+        body: JSON.stringify({ status: newStatus })
+      });
+      const json = await res.json();
+      if (json.ok) {
+        const order = allOrders.find(o => o.trackingNumber === tn);
+        if (order) order.status = newStatus;
+        toast('✓ Status updated: ' + newStatus);
+        renderStats();
+      } else {
+        toast('Error: ' + json.error);
+      }
+    } catch (err) {
+      toast('Server error. Try again.');
+    }
+  }
+
+  // ── EXPORT CSV ────────────────────────────────────────────
+  function exportCSV() {
+    if (!allOrders.length) { toast('No orders to export.'); return; }
+    const rows = [['Tracking#','Name','Email','Address','Contact','Items','Subtotal','Discount','Total','Status','Date']];
+    allOrders.forEach(o => {
+      rows.push([
+        o.trackingNumber, o.fullName, o.email, o.address, o.contact,
+        (o.items||[]).map(i => i.title + ' ₱'+i.price).join(' | '),
+        o.subtotal, o.discount||0, o.total, o.status,
+        new Date(o.placedAt).toLocaleString()
+      ]);
+    });
+    const csv  = rows.map(r => r.map(c => '"'+(String(c||'').replace(/"/g,'""'))+'"').join(',')).join('\n');
+    const blob = new Blob([csv], { type:'text/csv' });
+    const a    = document.createElement('a');
+    a.href     = URL.createObjectURL(blob);
+    a.download = 'closet-archive-orders-' + new Date().toISOString().slice(0,10) + '.csv';
+    a.click();
+    toast('CSV exported!');
+  }
+
+  // ── TOAST ─────────────────────────────────────────────────
+  function toast(msg) {
+    const el = document.getElementById('admin-toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    clearTimeout(el._t);
+    el._t = setTimeout(() => el.classList.remove('show'), 2500);
+  }
+
+  function esc(str) {
+    return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  // Auto-refresh every 60 seconds
+  setInterval(() => { if (adminToken) loadOrders(); }, 60000);
+</script>
+</body>
+</html>

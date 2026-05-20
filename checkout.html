@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Checkout - Closet Archive</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+
+</head>
+<body>
+
+    <header class="main-header">
+        <div class="logo">
+            <img src="img/logo1.png" alt="Closet Archive Logo" class="logo-img">
+        </div>
+        <div class="nav-cart">
+            <ul id="navbar">
+                <li><a href="index.html">Home</a></li>
+                <li><a href="shop.html">Shop</a></li>
+                <li><a href="about.html">About</a></li>
+                <li><a href="contact.html">Contact</a></li>
+            </ul>
+            <div class="header-icons">
+                <a href="cart.html" class="cart-icon-wrap">
+                    <i class="fas fa-shopping-cart"></i>
+                    <span class="cart-count" id="cart-count">0</span>
+                </a>
+            </div>
+        </div>
+        <div id="mobile">
+            <a href="cart.html" class="cart-icon-wrap">
+                <i class="fas fa-shopping-cart"></i>
+                <span class="cart-count" id="cart-count-mobile">0</span>
+            </a>
+            <i id="bar" class="fas fa-outdent"></i>
+        </div>
+    </header>
+
+    <section id="page-header" class="checkout-header">
+        <h2><i class="fas fa-box"></i> &nbsp;Checkout</h2>
+        <p>Complete your order below</p>
+    </section>
+
+    <p id="checkout-message"></p>
+
+    <div id="checkout-wrapper">
+
+
+        <div id="checkout-form-section" class="checkout-card">
+            <h2><i class="fas fa-truck" style="margin-right:8px;"></i>Shipping Information</h2>
+            <p class="shipping-required-note">* Required Fields</p>
+            <form id="checkout-form">
+
+                <div class="form-row">
+                    <div class="form-field">
+                        <input type="text" id="first-name" placeholder=" " required>
+                        <label for="first-name">First Name *</label>
+                        <i class="fas fa-user field-icon"></i>
+                        <p class="error-msg">Required field</p>
+                    </div>
+                    <div class="form-field">
+                        <input type="text" id="last-name" placeholder=" " required>
+                        <label for="last-name">Last Name *</label>
+                        <i class="fas fa-user field-icon"></i>
+                    </div>
+                </div>
+
+                <div class="form-field">
+                    <input type="email" id="email" placeholder=" ">
+                    <label for="email">Email Address *</label>
+                    <i class="fas fa-envelope field-icon"></i>
+                </div>
+
+                <div class="form-field">
+                    <select id="country">
+                        <option value="PH">Philippines</option>
+                        <option value="US">United States</option>
+                        <option value="OTHER">Other</option>
+                    </select>
+                    <label for="country">Country *</label>
+                </div>
+
+                <div class="form-field">
+                    <input type="text" id="street-address" placeholder=" " required>
+                    <label for="street-address">Street Address *</label>
+                    <i class="fas fa-map-marker-alt field-icon"></i>
+                </div>
+
+                <div class="form-field">
+                    <input type="text" id="street-number" placeholder=" ">
+                    <label for="street-number">Barangay (optional)</label>
+                    <i class="fas fa-map field-icon"></i>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-field">
+                        <input type="text" id="zip-code" placeholder=" " required>
+                        <label for="zip-code">ZIP Code *</label>
+                        <i class="fas fa-hashtag field-icon"></i>
+                    </div>
+                    <div class="form-field">
+                        <input type="text" id="city" placeholder=" " required>
+                        <label for="city">City / Town *</label>
+                        <i class="fas fa-city field-icon"></i>
+                    </div>
+                </div>
+
+                <div class="form-field">
+                    <input type="text" id="contact-number" placeholder=" " required>
+                    <label for="contact-number">Phone Number *</label>
+                    <i class="fas fa-phone field-icon"></i>
+                </div>
+
+                <!-- Hidden field for JS compatibility -->
+                <input type="hidden" id="full-name">
+                <input type="hidden" id="complete-address">
+
+                <div class="check-row">
+                    <input type="checkbox" id="billing-same" checked>
+                    <label for="billing-same" style="position:static; font-size:13px; color:#444; pointer-events:auto; transform:none;">Billing address same as shipping address</label>
+                </div>
+
+                <hr class="form-divider">
+
+                <div class="form-field" style="margin-bottom:6px;">
+                    <div class="promo-row">
+                        <div class="form-field" style="margin-bottom:0;">
+                            <input type="text" id="checkout-promo" placeholder=" ">
+                            <label for="checkout-promo">Promo Code</label>
+                        </div>
+                        <button type="button" onclick="applyCheckoutPromo()">Apply</button>
+                    </div>
+                </div>
+                <p class="promo-hint">Available codes: SAVE10 &nbsp;·&nbsp; CLOSET20 &nbsp;·&nbsp; ARCHIVE15</p>
+
+                <hr class="form-divider">
+
+                <button type="submit" id="place-order-button">
+                    <i class="fas fa-check-circle"></i> Save &amp; Continue
+                </button>
+
+            </form>
+        </div>
+
+        <!-- RIGHT: Order Summary -->
+        <div id="checkout-summary" class="checkout-card">
+            <h2><i class="fas fa-receipt" style="margin-right:8px;"></i>Order Summary</h2>
+            <div id="checkout-order-items">
+                <!-- Populated by JS -->
+            </div>
+            <div class="summary-totals">
+                <div class="summary-row">
+                    <span>Subtotal</span>
+                    <span id="checkout-subtotal">₱0.00</span>
+                </div>
+                <div class="summary-row">
+                    <span>Discount</span>
+                    <span id="checkout-discount" style="color:#c00;">₱0.00</span>
+                </div>
+                <div class="summary-row">
+                    <span>Shipping</span>
+                    <span style="color:green; font-weight:600;">Free</span>
+                </div>
+                <div class="summary-row total-row">
+                    <span>Total</span>
+                    <span id="checkout-total">₱0.00</span>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <footer class="section-p1">
+        <div class="col">
+            <img class="logo" src="img/logo1.png" alt="" width="150">
+            <h4>Contact</h4>
+            <p><strong>Address: </strong> Mercedes Camarines Norte</p>
+            <p><strong>Phone:</strong> 09691401769</p>
+            <div class="follow">
+                <h4>Follow Us</h4>
+                <div class="icon">
+                    <i class="fa-brands fa-facebook-f"></i>
+                    <i class="fa-brands fa-tiktok"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col">
+            <h4>About</h4>
+            <a href="#">About Us</a>
+            <a href="#">Delivery Information</a>
+            <a href="#">Terms & Condition</a>
+            <a href="#">Contact Us</a>
+        </div>
+        <div class="col">
+            <h4>My Account</h4>
+            <a href="#">Sign In</a>
+            <a href="cart.html">View Cart</a>
+            <a href="#">Track my Order</a>
+            <a href="#">Help</a>
+        </div>
+        <div class="colpay">
+            <h4>Payment Method</h4>
+            <p>Types of Payment</p>
+            <div class="row">
+                <img src="pays/pay1.jpg" alt="" width="40">
+                <img src="pays/pay2.jpg" alt="" width="40">
+                <img src="pays/pay3.jpg" alt="" width="50">
+            </div>
+        </div>
+    </footer>
+
+    <script src="js/main.js"></script>
+    <script>
+        function applyCheckoutPromo() {
+            renderCheckoutSummary();
+        }
+
+
+        document.getElementById('checkout-form').addEventListener('submit', function() {
+            const first = document.getElementById('first-name').value.trim();
+            const last = document.getElementById('last-name').value.trim();
+            document.getElementById('full-name').value = first + ' ' + last;
+
+            const street = document.getElementById('street-address').value.trim();
+            const brgy = document.getElementById('street-number').value.trim();
+            const zip = document.getElementById('zip-code').value.trim();
+            const city = document.getElementById('city').value.trim();
+            document.getElementById('complete-address').value = `${street}, ${brgy}, ${zip} ${city}`;
+        }, true);
+    </script>
+</body>
+</html>

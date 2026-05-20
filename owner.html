@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Owner Order Records</title>
+<style>
+    body {
+        font-family: Arial;
+        padding: 20px;
+        background: #f5f5f5;
+    }
+
+    h1 {
+        text-align: center;
+    }
+
+    .order-card {
+        background: white;
+        padding: 15px;
+        margin-bottom: 15px;
+        border-radius: 10px;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+
+    .order-header {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 10px;
+    }
+
+    .items {
+        margin-top: 10px;
+        padding-left: 10px;
+    }
+
+    .item {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 5px;
+    }
+
+    select {
+        padding: 5px;
+    }
+</style>
+</head>
+<body>
+
+<h1>Order History (Owner View)</h1>
+
+<div id="orders-container"></div>
+
+<script>
+const ordersKey = 'closetArchiveOrders';
+
+const orderStatuses = [
+    'Order Confirmed',
+    'Shipped',
+    'Out for Delivery',
+    'Delivered'
+];
+
+function formatPeso(value) {
+    return `₱${Number(value).toFixed(2)}`;
+}
+
+function getOrders() {
+    const raw = localStorage.getItem('closetArchiveOrders');
+    return raw ? JSON.parse(raw) : {};
+}
+
+function saveOrders(data) {
+    localStorage.setItem(ordersKey, JSON.stringify(data));
+}
+
+function renderOrders() {
+    const container = document.getElementById('orders-container');
+    const orders = getOrders();
+
+    container.innerHTML = '';
+
+    const keys = Object.keys(orders);
+
+    if (keys.length === 0) {
+        container.innerHTML = '<p>No orders yet.</p>';
+        return;
+    }
+
+    keys.reverse().forEach(key => {
+        const order = orders[key];
+
+        const div = document.createElement('div');
+        div.className = 'order-card';
+
+        div.innerHTML = `
+            <div class="order-header">
+                <strong>Tracking: ${order.trackingNumber}</strong>
+                <select onchange="updateStatus('${key}', this.value)">
+                    ${orderStatuses.map(s => `
+                        <option value="${s}" ${s === order.status ? 'selected' : ''}>${s}</option>
+                    `).join('')}
+                </select>
+            </div>
+
+            <p><strong>Name:</strong> ${order.fullName}</p>
+            <p><strong>Address:</strong> ${order.address}</p>
+            <p><strong>Contact:</strong> ${order.contact}</p>
+
+            <h4>Order Summary:</h4>
+            <div class="items">
+                ${order.items.map(item => `
+                    <div class="item">
+                        <span>${item.title}</span>
+                        <span>${formatPeso(item.price)}</span>
+                    </div>
+                `).join('')}
+            </div>
+
+            <p><strong>Total:</strong> ${formatPeso(order.total)}</p>
+            <p><strong>Date:</strong> ${new Date(order.placedAt).toLocaleString()}</p>
+        `;
+
+        container.appendChild(div);
+    });
+}
+
+function updateStatus(id, newStatus) {
+    const orders = getOrders();
+    orders[id].status = newStatus;
+    saveOrders(orders);
+    renderOrders();
+}
+
+renderOrders();
+</script>
+
+</body>
+</html>
